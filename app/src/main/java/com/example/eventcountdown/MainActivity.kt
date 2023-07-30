@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.READ_CALENDAR
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-
+                // TODO add something
             } else {
                 ActivityCompat.requestPermissions(
                     this,
