@@ -11,11 +11,22 @@ import android.provider.CalendarContract
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventNote
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,17 +35,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.eventcountdown.ui.theme.EventCountdownTheme
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.concurrent.TimeUnit
 
-data class Message(val author: String, val body: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,9 +65,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val calendars = readAvailableCalendars()
-
-                    CalendarList(calendars)
+                    CalendarList(readAvailableCalendars())
                 }
             }
 
@@ -59,9 +75,6 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.READ_CALENDAR
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                // readCalendarEvents()
-                val calendars = readAvailableCalendars()
-
 
             } else {
                 ActivityCompat.requestPermissions(
@@ -73,7 +86,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun readCalendarEvents() {
+    private fun convertLongToTime(time: Long): String {
+        val date = Date(time)
+        val format = SimpleDateFormat("dd.MM.yyyy")
+        return format.format(date)
+    }
+
+    private fun readCalendarEvents(calendarId: Long): List<CalendarEvent> {
         val contentResolver: ContentResolver = contentResolver
         val uri: Uri = CalendarContract.Events.CONTENT_URI
 
@@ -84,13 +103,20 @@ class MainActivity : ComponentActivity() {
             CalendarContract.Events.DTEND,
         )
 
-        val selection: String? = null
-        val selectionArgs: Array<String>? = null
+        val selection =
+            "${CalendarContract.Events.CALENDAR_ID} = ? AND ${CalendarContract.Events.DTSTART} >= ?"
+        val selectionArgs: Array<String> = arrayOf(
+            calendarId.toString(),
+            getStartOfLast14DaysInMillis().toString()
+        )
 
-        val sortOrder: String = "${CalendarContract.Events.DTSTART} ASC"
+
+        val sortOrder = "${CalendarContract.Events.DTSTART} ASC"
 
         val cursor: Cursor? =
             contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+
+        val eventsList = mutableListOf<CalendarEvent>()
 
         cursor?.use {
             if (it.moveToFirst()) {
@@ -102,22 +128,34 @@ class MainActivity : ComponentActivity() {
 
                 while (!it.isAfterLast) {
                     val eventId: Long = if (idColumnIndex != -1) it.getLong(idColumnIndex) else -1
-                    val eventTitle: String =
-                        if (titleColumnIndex != -1) it.getString(titleColumnIndex) else ""
+                    val eventTitle: String? =
+                        if (titleColumnIndex != -1 && !it.isNull(titleColumnIndex)) it.getString(
+                            titleColumnIndex
+                        ) else null
                     val startTime: Long =
                         if (startTimeColumnIndex != -1) it.getLong(startTimeColumnIndex) else -1
                     val endTime: Long =
                         if (endTimeColumnIndex != -1) it.getLong(endTimeColumnIndex) else -1
 
-                    Log.d("CalendarData", "Event Title: $eventTitle")
+                    val calendarEvent = CalendarEvent(eventId, eventTitle ?: "", startTime, endTime)
+                    eventsList.add(calendarEvent)
 
                     it.moveToNext()
                 }
             }
+
         }
+        return eventsList
     }
 
     data class CalendarData(val calendarId: Long, val accountName: String, val displayName: String)
+
+    data class CalendarEvent(
+        val eventId: Long,
+        val eventTitle: String,
+        val startTime: Long,
+        val endTime: Long
+    )
 
     @SuppressLint("Range")
     private fun readAvailableCalendars(): List<CalendarData> {
@@ -133,7 +171,7 @@ class MainActivity : ComponentActivity() {
         val selection: String? = null
         val selectionArgs: Array<String>? = null
 
-        val sortOrder: String = "${CalendarContract.Calendars._ID} ASC"
+        val sortOrder = "${CalendarContract.Calendars._ID} ASC"
         val cursor = contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
         cursor?.use {
             if (it.moveToFirst()) {
@@ -144,9 +182,6 @@ class MainActivity : ComponentActivity() {
                         it.getString(it.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME))
                     val displayName: String =
                         it.getString(it.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME))
-
-                    // Ausgabe der Kalenderdaten in der Logcat-Konsole
-                    Log.d("AvailableCalendar", "Display Name: $displayName")
 
                     val calendarData = CalendarData(calendarId, accountName, displayName)
                     calendarsList.add(calendarData)
@@ -166,8 +201,8 @@ class MainActivity : ComponentActivity() {
     fun CalendarItem(calendar: CalendarData) {
         var showDialog by remember { mutableStateOf(false) }
 
-        fun openDialog() {
-            showDialog = true
+        fun closeDialog() {
+            showDialog = false
         }
 
         ListItem(
@@ -175,8 +210,8 @@ class MainActivity : ComponentActivity() {
             trailingContent = {
                 IconButton(
                     onClick = {
-                        Log.d("lock", calendar.displayName)
-                        openDialog()
+                        Log.d("lock", "$calendar.displayName $calendar.calendarId")
+                        showDialog = true
                     },
                     content = {
                         Icon(
@@ -189,9 +224,8 @@ class MainActivity : ComponentActivity() {
         )
 
         if (showDialog) {
-            EventDialog(onDismiss = {
-                showDialog = false
-            })
+            val events = readCalendarEvents(calendar.calendarId)
+            EventDialog(showDialog, calendar.displayName, events, onDismiss = { closeDialog() })
         }
     }
 
@@ -207,22 +241,78 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun getRemainingDays(startTime: Long): Int {
+        val currentTime = System.currentTimeMillis()
+        val remainingTimeInMillis = startTime - currentTime
+        val remainingDays = TimeUnit.MILLISECONDS.toDays(remainingTimeInMillis)
+        return remainingDays.toInt()
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun EventDialog(onDismiss: () -> Unit) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(text = "moin") },
-            confirmButton = {
-                TextButton(onClick = { /*TODO*/ }) {
-                    Text(text = "ok")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                }) {
-                    Text(text = "abbrechen")
+    fun EventItem(event: CalendarEvent) {
+        val start = convertLongToTime(event.startTime)
+        val title = event.eventTitle
+        val remainingDays = getRemainingDays(event.startTime)
+
+        ListItem(
+            headlineText = { Text(text = title) },
+            supportingText = { Text(text = start) },
+            trailingContent = { Text(text = "$remainingDays Tage") }
+        )
+    }
+
+    private fun getStartOfLast14DaysInMillis(): Long {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -14)
+        return calendar.timeInMillis
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+    @Composable
+    fun EventDialog(
+        showDialog: Boolean,
+        calendarTitle: String,
+        events: List<CalendarEvent>,
+        onDismiss: () -> Unit
+    ) {
+        if (showDialog) {
+            val vertScrollState = rememberScrollState()
+
+            Dialog(onDismissRequest = onDismiss) {
+                Card(
+                    // or Surface
+                    modifier = Modifier
+                        .requiredWidth(LocalConfiguration.current.screenWidthDp.dp * 0.96f)
+                        .padding(4.dp),
+
+                    ) {
+                    Column {
+                        TopAppBar(
+                            title = { Text(text = calendarTitle) },
+                        )
+                        FlowRow(
+                            modifier = Modifier
+                                .verticalScroll(vertScrollState)
+                                .weight(1f)
+                        ) {
+                            events.forEach { event -> EventItem(event) }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = onDismiss) {
+                                Text(text = "abbrechen")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = onDismiss) {
+                                Text(text = "ok")
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
