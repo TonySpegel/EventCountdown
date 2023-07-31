@@ -27,15 +27,14 @@
         </activity>
 
         <receiver
-            android:name=".CounterWidgetReceiver"
+            android:name=".countdownwidget.CountdownWidgetReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.counterwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
-                android:name="android.counterwidget.provider"
-                android:resource="@xml/counter_widget_info" />
+                android:name="android.appwidget.provider"
+                android:resource="@xml/countdownwidget_provider" />
         </receiver>
     </application>
-
 </manifest>
