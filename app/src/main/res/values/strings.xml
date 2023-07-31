@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EventCountdown</string>
+    <string name="simple">simple</string>
 </resources>
