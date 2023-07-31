@@ -11,7 +11,10 @@ import android.provider.CalendarContract
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -26,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventNote
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -53,38 +58,94 @@ import java.util.Calendar
 import java.util.Date
 import java.util.concurrent.TimeUnit
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            EventCountdownTheme {
 
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    CalendarList(readAvailableCalendars())
+        requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+                if (isGranted) {
+                    recreate() // Restart the activity to show the calendar list
+                } else {
+                    recreate() // Restart the activity to show notice
                 }
             }
 
+        setContent {
+            var calendarPermissionState by remember { mutableStateOf(getCalendarPermissionState()) }
+            Log.d("permission", calendarPermissionState.toString())
 
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_CALENDAR
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                // TODO add something
-            } else {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.READ_CALENDAR),
-                    READ_CALENDAR_PERMISSION_CODE
-                )
+            EventCountdownTheme {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (calendarPermissionState) {
+                        CalendarPermissionState.NOT_GRANTED -> CalendarNotGranted() // No permission was granted/denied yet
+                        CalendarPermissionState.GRANTED -> CalendarGranted() // Permission granted let's go
+                        CalendarPermissionState.DENIED -> CalendarDenied()
+                    }
+                }
             }
         }
     }
+
+    @Composable
+    fun CalendarNotGranted() {
+        Button(
+            onClick = {
+                requestPermissionLauncher.launch(Manifest.permission.READ_CALENDAR)
+            }
+        ) {
+            Text(text = "Berechtigung erteilen")
+        }
+    }
+
+    @Composable
+    fun CalendarGranted() {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            CalendarList(readAvailableCalendars())
+        }
+    }
+
+    @Composable
+    fun CalendarDenied() {
+        Text(text = "Berechtigung wurde abgelehnt. Die App benötigt diese Berechtigung, um die Kalender anzuzeigen.")
+    }
+
+
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+
+    enum class CalendarPermissionState {
+        NOT_GRANTED,
+        GRANTED,
+        DENIED
+    }
+
+    private fun getCalendarPermissionState(): CalendarPermissionState {
+        if (ContextCompat.checkSelfPermission(
+                this@MainActivity,
+                Manifest.permission.READ_CALENDAR
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return CalendarPermissionState.GRANTED
+        }
+
+        // Check if the user has previously denied the permission
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this@MainActivity,
+                Manifest.permission.READ_CALENDAR
+            )
+        ) {
+            return CalendarPermissionState.DENIED
+        }
+
+        return CalendarPermissionState.NOT_GRANTED
+    }
+
 
     private fun convertLongToTime(time: Long): String {
         val date = Date(time)
