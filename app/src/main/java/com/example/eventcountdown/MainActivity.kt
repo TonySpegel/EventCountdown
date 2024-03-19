@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EventNote
+import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
             }
 
         setContent {
-            var calendarPermissionState by remember { mutableStateOf(getCalendarPermissionState()) }
+            val calendarPermissionState by remember { mutableStateOf(getCalendarPermissionState()) }
             Log.d("permission", calendarPermissionState.toString())
 
             EventCountdownTheme {
@@ -202,7 +203,7 @@ class MainActivity : ComponentActivity() {
                     },
                     content = {
                         Icon(
-                            Icons.Outlined.EventNote,
+                            Icons.AutoMirrored.Outlined.EventNote,
                             contentDescription = "Localized description"
                         )
                     }
@@ -286,14 +287,12 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            TextButton(onClick = {
-
-                            }) {
-                                Text(text = "Zum Homescreen hinzufügen")
+                            TextButton(onClick = {}) {
+                                Text(text = stringResource(R.string.add_to_homescreen))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = onDismiss) {
-                                Text(text = "abbrechen")
+                                Text(text = stringResource(R.string.cancel))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = onDismiss) {
