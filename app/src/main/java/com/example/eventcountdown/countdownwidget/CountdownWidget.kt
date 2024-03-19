@@ -1,14 +1,12 @@
 package com.example.eventcountdown.countdownwidget
 
 import android.content.Context
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.glance.Button
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.provideContent
@@ -19,8 +17,14 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
+import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import com.example.eventcountdown.MainActivity
+import androidx.glance.text.TextStyle
+import com.example.eventcountdown.helper.CalendarEvent
+import com.example.eventcountdown.helper.cLTT
+import com.example.eventcountdown.helper.calendarDisplayName
+import com.example.eventcountdown.helper.getRemainingDays
+import com.example.eventcountdown.helper.readCalendarEvents
 
 class CountdownWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -28,56 +32,82 @@ class CountdownWidget : GlanceAppWidget() {
             GlanceTheme(
                 GlanceTheme.colors
             ) {
-                ContentView()
+                WidgetContentView(context)
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContentView() {
+private fun WidgetContentView(ctx: Context) {
+    val calendarId = 18
+    val events = readCalendarEvents(ctx, calendarId)
+    val displayName = calendarDisplayName(ctx, calendarId)
+
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.secondary)
+            .background(GlanceTheme.colors.primaryContainer)
             .padding(16.dp),
         verticalAlignment = Alignment.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Where to?",
-            modifier = GlanceModifier.padding(12.dp)
+            text = "$displayName Countdown",
+            modifier = GlanceModifier.padding(horizontal = 18.dp),
+            style = TextStyle(
+                fontSize = 20.sp,
+                color = GlanceTheme.colors.onPrimaryContainer
+            )
         )
-        Row {
-            Button(
-                text = "Home",
-                onClick = actionStartActivity<MainActivity>()
-            )
-            Button(
-                text = "Work",
-                onClick = actionStartActivity<MainActivity>()
-            )
-        }
         LazyColumn {
-            items(10) { index: Int ->
-                EventItem("Item $index", index, index * 10)
+            events.forEach { event ->
+                item {
+                    WidgetEventItem(event)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EventItem(title: String, startTime: Int, days: Int) {
+private fun WidgetEventItem(event: CalendarEvent) {
+    val (_, eventTitle, startTime, endTime) = event
+
+    val start = cLTT(startTime)
+    val remainingDays = getRemainingDays(startTime)
+
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(
+                horizontal = 16.dp,
+                vertical = 8.dp,
+            )
     ) {
-        val modifier = GlanceModifier.defaultWeight()
+        Column {
+            Text(
+                text = eventTitle,
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = GlanceTheme.colors.onPrimaryContainer
+                )
+            )
+            Text(
+                text = start,
+                style = TextStyle(color = GlanceTheme.colors.onPrimaryContainer)
+            )
+        }
 
-        Text(text = title, modifier)
-        Text(text = startTime.toString(), modifier)
-        Text(text = "$days Tage", modifier)
+        Column(
+            modifier = GlanceModifier.defaultWeight()
+        ) {
+            Text(
+                text = "$remainingDays Tage",
+                modifier = GlanceModifier.fillMaxWidth(),
+                style = TextStyle(color = GlanceTheme.colors.onPrimaryContainer)
+            )
+        }
     }
 }
