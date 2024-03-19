@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">EventCountdown</string>
+    <string name="simple">simple</string>
+    <string name="add_to_homescreen">Add to home screen</string>
+    <string name="cancel">Cancel</string>
 </resources>
