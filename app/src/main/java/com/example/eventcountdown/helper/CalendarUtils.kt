@@ -3,6 +3,7 @@ package com.example.eventcountdown.helper
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.provider.CalendarContract
@@ -30,6 +31,12 @@ fun getRemainingDays(startTime: Long): Int {
 fun getStartOfLast14DaysInMillis(): Long {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_YEAR, -14)
+    return calendar.timeInMillis
+}
+
+fun getStartDaysInMillis(): Long {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR,0)
     return calendar.timeInMillis
 }
 
@@ -86,7 +93,7 @@ fun readCalendarEvents(context: Context, calendarId: Int): List<CalendarEvent> {
 
     val selectionArgs: Array<String> = arrayOf(
         calendarId.toString(),
-        getStartOfLast14DaysInMillis().toString()
+        getStartDaysInMillis().toString()
     )
 
     val sortOrder = "${CalendarContract.Events.DTSTART} ASC"
@@ -123,4 +130,13 @@ fun readCalendarEvents(context: Context, calendarId: Int): List<CalendarEvent> {
     }
 
     return eventsList
+}
+
+fun openCalendarEvent(context: Context, eventId: Long) {
+    val intent = Intent(Intent.ACTION_VIEW)
+        .setData(CalendarContract.Events.CONTENT_URI.buildUpon()
+            .appendPath(eventId.toString())
+            .build())
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
 }
