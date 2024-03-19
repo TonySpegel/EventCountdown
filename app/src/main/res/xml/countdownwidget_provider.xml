@@ -4,6 +4,8 @@
     android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="40dp"
     android:minHeight="40dp"
+    android:targetCellWidth="5"
+    android:targetCellHeight="3"
     android:previewImage="@mipmap/ic_launcher_foreground"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="10000"
