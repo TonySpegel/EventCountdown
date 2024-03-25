@@ -2,6 +2,11 @@ package com.example.eventcountdown
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -198,8 +203,10 @@ class MainActivity : ComponentActivity() {
             trailingContent = {
                 IconButton(
                     onClick = {
-                        Log.d("lock", "$calendar.displayName $calendar.calendarId")
+                        Log.d("lock", "${calendar.displayName} ${calendar.calendarId}")
                         showDialog = true
+
+                        pinWidget(this@MainActivity)
                     },
                     content = {
                         Icon(
@@ -219,9 +226,27 @@ class MainActivity : ComponentActivity() {
 
             EventDialog(
                 showDialog,
-                calendar.calendarId.toString(),
+                "${calendar.displayName} - ${calendar.calendarId}",
                 events,
                 onDismiss = { closeDialog() })
+        }
+    }
+
+    // WIP
+    private fun pinWidget(ctx: Context) {
+        val appWidgetManager = AppWidgetManager.getInstance(ctx)
+        val myProvider = ComponentName(ctx, CountdownWidget::class.java)
+        val successIntent = Intent(ctx, MainActivity::class.java)
+
+        if (appWidgetManager.isRequestPinAppWidgetSupported) {
+            val successCallback = PendingIntent.getBroadcast(
+                ctx,
+                0,
+                successIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            appWidgetManager.requestPinAppWidget(myProvider, null, successCallback)
         }
     }
 
