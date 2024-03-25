@@ -5,12 +5,18 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
+import android.icu.text.MeasureFormat
+import android.icu.util.Measure
+import android.icu.util.MeasureUnit
 import android.net.Uri
 import android.provider.CalendarContract
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
 
 data class CalendarData(val calendarId: Long, val accountName: String, val displayName: String)
 
@@ -36,7 +42,7 @@ fun getStartOfLast14DaysInMillis(): Long {
 
 fun getStartDaysInMillis(): Long {
     val calendar = Calendar.getInstance()
-    calendar.add(Calendar.DAY_OF_YEAR,0)
+    calendar.add(Calendar.DAY_OF_YEAR, 0)
     return calendar.timeInMillis
 }
 
@@ -54,7 +60,7 @@ fun cLTT(time: Long): String {
     return format.format(date)
 }
 
-fun calendarDisplayName(context: Context,calendarId: Int): String? {
+fun calendarDisplayName(context: Context, calendarId: Int): String? {
     val contentResolver: ContentResolver = context.contentResolver
     val uri: Uri = CalendarContract.Calendars.CONTENT_URI
 
@@ -69,7 +75,8 @@ fun calendarDisplayName(context: Context,calendarId: Int): String? {
     val cursor = contentResolver.query(uri, projection, selection, selectionArgs, null)
     cursor?.use {
         if (it.moveToFirst()) {
-            val displayNameIndex = it.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val displayNameIndex =
+                it.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
             return it.getString(displayNameIndex)
         }
     }
@@ -134,9 +141,42 @@ fun readCalendarEvents(context: Context, calendarId: Int): List<CalendarEvent> {
 
 fun openCalendarEvent(context: Context, eventId: Long) {
     val intent = Intent(Intent.ACTION_VIEW)
-        .setData(CalendarContract.Events.CONTENT_URI.buildUpon()
-            .appendPath(eventId.toString())
-            .build())
+        .setData(
+            CalendarContract.Events.CONTENT_URI.buildUpon()
+                .appendPath(eventId.toString())
+                .build()
+        )
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
+}
+
+fun getRelativeTimeString(duration: Duration): CharSequence {
+    val differenceMillis = duration.toMillis()
+    val days: Long = TimeUnit.MILLISECONDS.toDays(differenceMillis)
+    val hours: Long = TimeUnit.MILLISECONDS.toHours(differenceMillis) % 24
+    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(differenceMillis) % 60
+    val stringBuilder = StringBuilder()
+    val formatter = MeasureFormat.getInstance(Locale.getDefault(), MeasureFormat.FormatWidth.WIDE)
+
+    val totalHours = TimeUnit.MILLISECONDS.toHours(differenceMillis).toDouble()
+    val fullDays = ceil(totalHours / 24).toLong()
+
+    if (fullDays > 0) {
+        stringBuilder.append(formatter.format(Measure(fullDays, MeasureUnit.DAY)))
+    } else {
+        if (hours > 0) {
+            stringBuilder.append("In ")
+                .append(formatter.format(Measure(hours, MeasureUnit.HOUR)))
+                .append(" ")
+        }
+        if (minutes > 0) {
+            stringBuilder.append(formatter.format(Measure(minutes, MeasureUnit.MINUTE)))
+        }
+    }
+
+    if (stringBuilder.isEmpty()) {
+        stringBuilder.append("now")
+    }
+
+    return stringBuilder.toString()
 }
