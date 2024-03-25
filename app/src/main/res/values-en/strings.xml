@@ -5,4 +5,5 @@
     <string name="add_to_homescreen">Add to home screen</string>
     <string name="cancel">Cancel</string>
     <string name="no_events">No upcoming events</string>
+    <string name="widget_description">Displays the remaining time until an event\'s start in a human-readable form</string>
 </resources>
