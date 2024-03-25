@@ -3,4 +3,5 @@
     <string name="simple">simple</string>
     <string name="add_to_homescreen">Zum Homescreen hinzufügen</string>
     <string name="cancel">Abbrechen</string>
+    <string name="no_events">Keine anstehenden Events</string>
 </resources>
