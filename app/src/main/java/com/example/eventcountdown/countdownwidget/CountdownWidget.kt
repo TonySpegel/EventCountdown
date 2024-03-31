@@ -27,6 +27,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.example.eventcountdown.R
 import com.example.eventcountdown.helper.CalendarEvent
@@ -37,6 +38,8 @@ import com.example.eventcountdown.helper.openCalendarEvent
 import com.example.eventcountdown.helper.readCalendarEvents
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class CountdownWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -56,23 +59,37 @@ class CountdownWidget : GlanceAppWidget() {
 @Composable
 private fun WidgetContentView(ctx: Context, calendarId: Int) {
     val events = readCalendarEvents(ctx, calendarId)
-    val displayName = calendarDisplayName(ctx, calendarId)
+    val displayName =
+        calendarDisplayName(ctx, calendarId)
+            ?: "${LocalContext.current.getString(R.string.is_loading)}..."
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    val currentTime = LocalDateTime.now().format(formatter)
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(GlanceTheme.colors.surface)
             .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
             Text(
-                text = "$displayName · Countdown",
-                modifier = GlanceModifier.padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
+                text = displayName,
+                modifier = GlanceModifier.padding(end = 18.dp, bottom = 8.dp),
                 style = TextStyle(
-                    fontSize = 20.sp,
-                    color = GlanceTheme.colors.onSurface
-                )
+                    color = GlanceTheme.colors.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 18.sp,
+
+                    ),
+            )
+            Text(
+                text = "${LocalContext.current.getString(R.string.updated)} $currentTime",
+                modifier = GlanceModifier.defaultWeight(),
+                style = TextStyle(
+                    color = GlanceTheme.colors.onTertiaryContainer,
+                    textAlign = TextAlign.End,
+                    fontSize = 12.sp,
+                ),
             )
         }
 
@@ -105,18 +122,24 @@ private fun WidgetNoEvents() {
 
 @Composable
 private fun WidgetEvents(events: List<CalendarEvent>, ctx: Context) {
+    val numberOfEvents = events.size
+
     LazyColumn(
         horizontalAlignment = Alignment.Start,
         modifier = GlanceModifier.fillMaxWidth()
     ) {
-        events.forEach {
-            item { WidgetEventItem(it, ctx) }
+        events.forEachIndexed { index, event ->
+            val isLastItem = index == numberOfEvents - 1
+
+            run {
+                item { WidgetEventItem(event, isLastItem, ctx) }
+            }
         }
     }
 }
 
 @Composable
-private fun WidgetEventItem(event: CalendarEvent, ctx: Context) {
+private fun WidgetEventItem(event: CalendarEvent, lastEvent: Boolean, ctx: Context) {
     val (eventId, eventTitle, startTime, _) = event
     val start = cLTT(startTime)
     val duration = Duration.between(
@@ -125,8 +148,12 @@ private fun WidgetEventItem(event: CalendarEvent, ctx: Context) {
     )
 
     val relativeDuration = getRelativeTimeString(duration).toString()
+    val eventModifierPadding =
+        if (!lastEvent) {
+            GlanceModifier.padding(vertical = 6.dp)
+        } else GlanceModifier.padding(top = 6.dp, bottom = 16.dp)
 
-    Box(modifier = GlanceModifier.padding(vertical = 6.dp)) {
+    Box(modifier = eventModifierPadding) {
         Column(
             modifier = GlanceModifier
                 .padding(
