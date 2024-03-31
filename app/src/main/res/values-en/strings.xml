@@ -6,4 +6,9 @@
     <string name="cancel">Cancel</string>
     <string name="no_events">No upcoming events</string>
     <string name="widget_description">Displays the remaining time until an event\'s start in a human-readable form</string>
+    <string name="updated">Updated</string>
+    <string name="choose_calendar">Choose calendar</string>
+    <string name="choose_calendar_long">Select Calendar to place it as a widget on your home screen</string>
+    <string name="upcoming_events">Upcoming events</string>
+    <string name="is_loading">Loading</string>
 </resources>

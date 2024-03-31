@@ -5,4 +5,9 @@
     <string name="cancel">Abbrechen</string>
     <string name="no_events">Keine anstehenden Events</string>
     <string name="widget_description">Zeigt die verbleibende Zeit bis zu Events eines Kalenders in menschenlesbarer Dauer an</string>
+    <string name="updated">Aktualisiert</string>
+    <string name="choose_calendar">Kalender auswählen</string>
+    <string name="choose_calendar_long">Kalender auswählen, um diesen als Widget auf Ihrem Homescreen zu platzieren</string>
+    <string name="upcoming_events">Anstehende Events</string>
+    <string name="is_loading">Lädt</string>
 </resources>
