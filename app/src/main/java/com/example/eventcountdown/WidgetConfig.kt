@@ -7,20 +7,34 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.lifecycle.lifecycleScope
 import com.example.eventcountdown.countdownwidget.CountdownWidget
+import com.example.eventcountdown.helper.CalendarData
+import com.example.eventcountdown.helper.readAvailableCalendars
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -38,34 +52,95 @@ class WidgetConfig : ComponentActivity() {
 
         val ctx = this@WidgetConfig
         val manager = GlanceAppWidgetManager(ctx)
-        val glanceId = GlanceAppWidgetManager(this).getGlanceIdBy(appWidgetId)
+        val glanceId = manager.getGlanceIdBy(appWidgetId)
+        val calendars = readAvailableCalendars(ctx)
 
         setContent {
-            LazyColumn(
-                horizontalAlignment = Alignment.Start,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.padding(vertical = 16.dp)
             ) {
+                CalendarIntro()
+                CalendarList(ctx, manager, glanceId, calendars)
+            }
+        }
+    }
+
+    @Composable
+    fun CalendarIntro() {
+        Text(
+            text = LocalContext.current.getString(R.string.choose_calendar),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Text(
+            text = LocalContext.current.getString(R.string.choose_calendar_long),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
+
+    @Composable
+    fun CalendarList(
+        ctx: Context,
+        manager: GlanceAppWidgetManager,
+        glanceId: GlanceId,
+        calendars: List<CalendarData>
+    ) {
+        LazyColumn(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 8.dp,
+                )
+        ) {
+            calendars.forEach { calendar ->
                 item {
-                    CalendarButton(ctx, 18, glanceId, manager)
-                }
-                item {
-                    CalendarButton(ctx, 9, glanceId, manager)
+                    CalendarItem(ctx, calendar, glanceId, manager)
                 }
             }
         }
     }
 
     @Composable
-    private fun CalendarButton(
+    private fun CalendarItem(
         ctx: Context,
-        calendarId: Int,
+        calendarData: CalendarData,
         glanceId: GlanceId,
         glanceManager: GlanceAppWidgetManager
     ) {
-        TextButton(onClick = {
-            updateWidget(ctx, calendarId, glanceId, glanceManager)
-        }) {
-            Text(text = "$calendarId ${stringResource(R.string.add_to_homescreen)}")
+        val calendarId = calendarData.calendarId.toInt()
+
+        Box(modifier = Modifier.padding(vertical = 6.dp)) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = calendarData.displayName,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                trailingContent = {
+                    IconButton(
+                        content = {
+                            Icon(
+                                Icons.Filled.ArrowDownward,
+                                contentDescription = "Localized description",
+                            )
+                        },
+                        onClick = { updateWidget(ctx, calendarId, glanceId, glanceManager) }
+                    )
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+                modifier = Modifier
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+            )
         }
     }
 
