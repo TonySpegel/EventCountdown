@@ -180,3 +180,39 @@ fun getRelativeTimeString(duration: Duration): CharSequence {
 
     return stringBuilder.toString()
 }
+
+@SuppressLint("Range")
+fun readAvailableCalendars(ctx: Context): List<CalendarData> {
+    val calendarsList = mutableListOf<CalendarData>()
+    val uri: Uri = CalendarContract.Calendars.CONTENT_URI
+
+    val projection: Array<String> = arrayOf(
+        CalendarContract.Calendars._ID,
+        CalendarContract.Calendars.ACCOUNT_NAME,
+        CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
+    )
+
+    val selection: String? = null
+    val selectionArgs: Array<String>? = null
+
+    val sortOrder = "${CalendarContract.Calendars._ID} ASC"
+    val cursor = ctx.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+
+    cursor?.use {
+        if (it.moveToFirst()) {
+            do {
+                val calendarId: Long =
+                    it.getLong(it.getColumnIndex(CalendarContract.Calendars._ID))
+                val accountName: String =
+                    it.getString(it.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME))
+                val displayName: String =
+                    it.getString(it.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME))
+
+                val calendarData = CalendarData(calendarId, accountName, displayName)
+                calendarsList.add(calendarData)
+            } while (it.moveToNext())
+        }
+    }
+
+    return calendarsList
+}
