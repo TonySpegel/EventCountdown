@@ -1,16 +1,13 @@
 package com.example.eventcountdown
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.CalendarContract
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -64,6 +61,7 @@ import com.example.eventcountdown.helper.CalendarData
 import com.example.eventcountdown.helper.CalendarEvent
 import com.example.eventcountdown.helper.convertLongToTime
 import com.example.eventcountdown.helper.getRemainingDays
+import com.example.eventcountdown.helper.readAvailableCalendars
 import com.example.eventcountdown.helper.readCalendarEvents
 import com.example.eventcountdown.ui.theme.EventCountdownTheme
 import com.example.eventcountdown.ui.views.CalendarDenied
@@ -118,7 +116,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            CalendarList(readAvailableCalendars())
+            CalendarList(readAvailableCalendars(this@MainActivity))
         }
     }
 
@@ -149,45 +147,6 @@ class MainActivity : ComponentActivity() {
         }
 
         return CalendarPermissionState.NOT_GRANTED
-    }
-
-    @SuppressLint("Range")
-    private fun readAvailableCalendars(): List<CalendarData> {
-        val calendarsList = mutableListOf<CalendarData>()
-        val uri: Uri = CalendarContract.Calendars.CONTENT_URI
-
-        val projection: Array<String> = arrayOf(
-            CalendarContract.Calendars._ID,
-            CalendarContract.Calendars.ACCOUNT_NAME,
-            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
-        )
-
-        val selection: String? = null
-        val selectionArgs: Array<String>? = null
-
-        val sortOrder = "${CalendarContract.Calendars._ID} ASC"
-        val cursor = contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                do {
-                    val calendarId: Long =
-                        it.getLong(it.getColumnIndex(CalendarContract.Calendars._ID))
-                    val accountName: String =
-                        it.getString(it.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME))
-                    val displayName: String =
-                        it.getString(it.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME))
-
-                    val calendarData = CalendarData(calendarId, accountName, displayName)
-                    calendarsList.add(calendarData)
-                } while (it.moveToNext())
-            }
-        }
-
-        return calendarsList
-    }
-
-    companion object {
-        private const val READ_CALENDAR_PERMISSION_CODE = 1
     }
 
     @Composable
